@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KHCC Radiotherapy OT Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f5f5;
+            background-image: url('https://www.sigma.jo/Content/images/projects/gallery/636795003678589327KHCC1.jpg');
+            background-size: cover;
+            background-attachment: fixed;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #0875a8;
+            margin-top: 10px; /* Add margin to the title */
+        }
+        h2 {
+            text-align: center;
+            color: #0576a9;
+        }
+        .input-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+        }
+        input[type="text"], input[type="number"], input[type="time"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        button {
+            background-color: #0875a8;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            transition: background-color 0.3s;
+            margin: 5px 0;
+        }
+        button:hover {
+            background-color: #075f8a;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            background: #e7f3ff;
+            border: 1px solid #2196f3;
+            border-radius: 4px;
+        }
+        .day-input {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            background: #fafafa;
+        }
+        .icon {
+            display: block; /* Ensures the icon is treated as a block element */
+            margin: 0 auto; /* Centers the icon */
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhatfT9gJ1NImAB22X4llOYkLWAPD3yof6f3e49uA_l8-JxSvloRuOksqTUch8KuJ_csgof0ZK3s626i0fksFoo76L14A965l8SzQg9sUjX30XxWO6vDrPhyphenhyphenS8mN2ofms5KJhP_C27yfjY/s16000/2%25D9%2585%25D8%25B1%25D9%2583%25D8%25B2+%25D8%25A7%25D9%2584%25D8%25AD%25D8%25B3%25D9%258A%25D9%2586+%25D9%2584%25D9%2584%25D8%25B3%25D8%25B1%25D8%25B7%25D8%25A7%25D9%2586.png" alt="Icon" class="icon" width="150" height="150">
+        <h1>KHCC Radiotherapy OT Portal</h1>
+        <h2>By Amr Karajah-RT</h2>
+        <div class="input-group">
+            <label for="employeeName">Employee Name:</label>
+            <input type="text" id="employeeName" placeholder="Enter employee name">
+        </div>
+        <div class="input-group">
+            <label for="employeeID">Employee ID:</label>
+            <input type="text" id="employeeID" placeholder="Enter employee ID">
+        </div>
+        <div class="input-group">
+            <label for="month">Select Month:</label>
+            <select id="month" onchange="generateDays()"></select>
+        </div>
+        <div class="input-group">
+            <label for="year">Enter Year:</label>
+            <input type="number" id="year" value="${new Date().getFullYear()}" min="2000" max="2100" onchange="generateDays()">
+        </div>
+        <div class="input-group">
+            <label for="hourlyRate">Hourly Rate ($):</label>
+            <input type="number" id="hourlyRate" placeholder="Enter your hourly rate" step="0.01">
+        </div>
+        <div id="daily-inputs"></div>
+        <button onclick="calculate()">Calculate Overtime</button>
+        <button onclick="saveData()">Save as XLSX</button>
+        <button onclick="saveOTOnly()">Save OT Only</button>
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        // Populate the month dropdown
+        function populateMonths() {
+            const monthSelect = document.getElementById('month');
+            const months = [
+                'January', 'February', 'March', 'April',
+                'May', 'June', 'July', 'August',
+                'September', 'October', 'November', 'December'
+            ];
+            months.forEach((month, index) => {
+                const option = document.createElement('option');
+                option.value = index; // Store month as number (0-11)
+                option.textContent = month;
+                monthSelect.appendChild(option);
+            });
+        }
+
+        // Generate days for the selected month and year
+        function generateDays() {
+            const month = parseInt(document.getElementById('month').value);
+            const year = parseInt(document.getElementById('year').value);
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const dailyInputs = document.getElementById('daily-inputs');
+            dailyInputs.innerHTML = ''; // Clear previous inputs
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateObj = new Date(year, month, day);
+                const formattedDate = `${day < 10 ? '0' + day : day}/${month < 9 ? '0' + (month + 1) : (month + 1)}/${year}`;
+                const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+                const dayDiv = document.createElement('div');
+                dayDiv.classList.add('day-input');
+                dayDiv.innerHTML = `
+                    <h3>${formattedDate} (${dayName})</h3>
+                    <label for="startTimeDay${day}">Start Time:</label>
+                    <input type="time" id="startTimeDay${day}" value="08:00">
+                    <label for="endTimeDay${day}">End Time:</label>
+                    <input type="time" id="endTimeDay${day}" value="16:00">
+                    <label for="dayTypeDay${day}">Day Type:</label>
+                    <select id="dayTypeDay${day}">
+                        <option value="normal">Normal Day</option>
+                        <option value="vacation">Vacation Day</option>
+                    </select>
+                    <label for="payTypeDay${day}">Pay Type:</label>
+                    <select id="payTypeDay${day}">
+                        <option value="pay">Pay</option>
+                        <option value="work hours">Work Hours</option>
+                    </select>
+                `;
+                dailyInputs.appendChild(dayDiv);
+            }
+        }
+
+        // Calculate function
+        function calculate() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerText = ""; // Clear previous results
+            const hourlyRate = parseFloat(document.getElementById('hourlyRate').value);
+            if (isNaN(hourlyRate) || hourlyRate <= 0) {
+                resultDiv.innerText = "Please enter a valid hourly rate.";
+                return;
+            }
+            let totalOvertimePay = 0;
+
+            const dailyInputs = document.getElementById('daily-inputs');
+            for (let day = 1; day <= dailyInputs.children.length; day++) {
+                const dayDiv = dailyInputs.children[day - 1];
+                const startTime = dayDiv.querySelector(`#startTimeDay${day}`).value;
+                const endTime = dayDiv.querySelector(`#endTimeDay${day}`).value;
+                const dayType = dayDiv.querySelector(`#dayTypeDay${day}`).value;
+                const payType = dayDiv.querySelector(`#payTypeDay${day}`).value;
+
+                const [startHour, startMinute] = startTime.split(':').map(Number);
+                const [endHour, endMinute] = endTime.split(':').map(Number);
+
+                let overtimeMinutes = 0;
+                if (endHour > 16) {
+                    overtimeMinutes = (endHour - 16) * 60 + endMinute;
+                } else if (endHour === 16 && endMinute > 0) {
+                    overtimeMinutes = endMinute;
+                }
+
+                let dailyOvertimePay = 0;
+                if (payType === "pay") {
+                    if (dayType === "normal") {
+                        dailyOvertimePay = (overtimeMinutes / 60) * (hourlyRate * 1.25);
+                    } else if (dayType === "vacation") {
+                        dailyOvertimePay = (overtimeMinutes / 60) * (hourlyRate * 1.5);
+                    }
+                }
+
+                totalOvertimePay += dailyOvertimePay;
+            }
+
+            resultDiv.innerText = `Total Overtime Pay: $${totalOvertimePay.toFixed(2)}`;
+        }
+
+        // Save OT Only to XLSX
+        function saveOTOnly() {
+            const employeeName = document.getElementById('employeeName').value || "Employee";
+            const employeeID = document.getElementById('employeeID').value || "ID";
+            const month = document.getElementById('month').value;
+            const year = document.getElementById('year').value;
+            const dailyInputs = document.getElementById('daily-inputs');
+            const data = [["Date", "Day", "Start Time", "End Time", "Day Type", "Pay Type", "Overtime Hours", "Overtime Minutes", "Total Overtime Pay"]];
+
+            for (let day = 1; day <= dailyInputs.children.length; day++) {
+                const dayDiv = dailyInputs.children[day - 1];
+                const startTime = dayDiv.querySelector(`#startTimeDay${day}`).value;
+                const endTime = dayDiv.querySelector(`#endTimeDay${day}`).value;
+                const dayType = dayDiv.querySelector(`#dayTypeDay${day}`).value;
+                const payType = dayDiv.querySelector(`#payTypeDay${day}`).value;
+
+                const dateObj = new Date(year, month, day);
+                const dateFormatted = dateObj.toLocaleDateString('en-US');
+                const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+
+                let overtimeMinutes = 0;
+                const [startHour, startMinute] = startTime.split(':').map(Number);
+                const [endHour, endMinute] = endTime.split(':').map(Number);
+
+                if (endHour > 16) {
+                    overtimeMinutes = (endHour - 16) * 60 + endMinute;
+                } else if (endHour === 16 && endMinute > 0) {
+                    overtimeMinutes = endMinute;
+                }
+
+                let dailyOvertimePay = 0;
+                const hourlyRate = parseFloat(document.getElementById('hourlyRate').value) || 0;
+
+                if (payType === "pay" && (hourlyRate > 0 || isNaN(hourlyRate) || overtimeMinutes > 0)) {
+                    if (dayType === "normal") {
+                        dailyOvertimePay = (overtimeMinutes / 60) * (hourlyRate * 1.25);
+                    } else if (dayType === "vacation") {
+                        dailyOvertimePay = (overtimeMinutes / 60) * (hourlyRate * 1.5);
+                    }
+                }
+
+                // Only include this day if there is overtime pay, working minutes, or if it's a work hour type with overtime minutes
+                const totalOvertimeHours = Math.floor(overtimeMinutes / 60);
+                const totalOvertimeRemainingMinutes = overtimeMinutes % 60;
+
+                if ((dailyOvertimePay > 0 && payType === "pay") || (overtimeMinutes > 0 && payType === "work hours")) {
+                    data.push([dateFormatted, dayName, startTime, endTime, dayType, payType, totalOvertimeHours, totalOvertimeRemainingMinutes, dailyOvertimePay.toFixed(2)]);
+                }
+            }
+
+            if (data.length > 1) {
+                const ws = XLSX.utils.aoa_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Overtime Data');
+                XLSX.writeFile(wb, `${employeeName}_${month + 1}_${year}_OT_Only.xlsx`);
+            } else {
+                alert("No overtime data to save.");
+            }
+        }
+
+        // Save Data to XLSX
+        function saveData() {
+            const employeeName = document.getElementById('employeeName').value || "Employee";
+            const employeeID = document.getElementById('employeeID').value || "ID";
+            const month = document.getElementById('month').value;
+            const year = document.getElementById('year').value;
+            const dailyInputs = document.getElementById('daily-inputs');
+            const data = [["Date", "Day", "Start Time", "End Time", "Day Type", "Pay Type", "Overtime Hours", "Overtime Minutes", "Total Overtime Pay", "Hourly Rate"]];
+
+            for (let day = 1; day <= dailyInputs.children.length; day++) {
+                const dayDiv = dailyInputs.children[day - 1];
+                const startTime = dayDiv.querySelector(`#startTimeDay${day}`).value;
+                const endTime = dayDiv.querySelector(`#endTimeDay${day}`).value;
+                const dayType = dayDiv.querySelector(`#dayTypeDay${day}`).value;
+                const payType = dayDiv.querySelector(`#payTypeDay${day}`).value;
+
+                const dateObj = new Date(year, month, day);
+                const dateFormatted = dateObj.toLocaleDateString('en-US');
+                const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+
+                let overtimeMinutes = 0;
+                const [startHour, startMinute] = startTime.split(':').map(Number);
+                const [endHour, endMinute] = endTime.split(':').map(Number);
+
+                if (endHour > 16) {
+                    overtimeMinutes = (endHour - 16) * 60 + endMinute;
+                } else if (endHour === 16 && endMinute > 0) {
+                    overtimeMinutes = endMinute;
+                }
+
+                let dailyOvertimePay = 0;
+                const hourlyRate = parseFloat(document.getElementById('hourlyRate').value) || 0;
+
+                if (payType === "pay") {
+                    if (dayType === "normal") {
+                        dailyOvertimePay = (overtimeMinutes / 60) * (hourlyRate * 1.25);
+                    } else if (dayType === "vacation") {
+                        dailyOvertimePay = (overtimeMinutes / 60) * (hourlyRate * 1.5);
+                    }
+                }
+
+                const totalOvertimeHours = Math.floor(overtimeMinutes / 60);
+                const totalOvertimeRemainingMinutes = overtimeMinutes % 60;
+
+                data.push([dateFormatted, dayName, startTime, endTime, dayType, payType, totalOvertimeHours, totalOvertimeRemainingMinutes, dailyOvertimePay.toFixed(2), hourlyRate]);
+            }
+
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Overtime Data');
+            XLSX.writeFile(wb, `${employeeName}_${month + 1}_${year}_Overtime.xlsx`);
+        }
+
+        // Initialize the month dropdown and generate days on page load
+        window.onload = function() {
+            populateMonths();
+            generateDays();
+        };
+    </script>
+</body>
+</html>
